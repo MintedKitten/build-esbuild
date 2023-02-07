@@ -4,7 +4,6 @@ import {
   existsSync,
   mkdirSync,
   rmSync,
-  createReadStream,
   writeFileSync,
   copyFileSync,
   readFileSync,
@@ -165,7 +164,7 @@ export async function build({
   const _minifying: boolean = minifying;
   const _clearPreviousBuild: boolean = clearPreviousBuild;
 
-  console.log("[build-esbuild] Start operating");
+  console.log("[build-esbuild] Start operation");
 
   // Verbose options
   if (verbose) {
@@ -345,7 +344,7 @@ export async function build({
     }
   }
 
-  console.log("[build-esbuild] Finish operating");
+  console.log("[build-esbuild] Finish operation");
 
   /**
    * Fixing import if output format is in esm (ECMAScript)

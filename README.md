@@ -6,7 +6,9 @@ Transpiling typescript files and copy every other files in source folder to outp
 
 ## Example
 ```sh
+build-esbuild --help
 build-esbuild -s src -o dist
+build-esbuild -s src -o dist -f esm -m true -d true -v
 ```
 
 ## License

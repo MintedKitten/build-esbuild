@@ -312,17 +312,25 @@ export async function build({
   if (_outputFormat === "esm") {
     if (verbose) {
       console.log(
-        `[build-esbuild] Output format is: ${_outputFormat}. Fixing local import.`
+        `[build-esbuild] Output format is: ${_outputFormat}. Must fix local import.`
       );
+    }
+    if (verbose) {
+      console.log("[build-esbuild] [Start] Fixing local import.");
     }
     await esmUpdateLocalImport(entryPoints)
       .then((r) => {
+        if (r) {
+        }
         console.log(r);
       })
       .catch((er) => {
-        console.log("ECMA Fix Error");
-        console.log(er);
+        console.error("ECMA Fix Error");
+        console.error(er);
       });
+    if (verbose) {
+      console.log("[build-esbuild] [Finish] Fixing local import.");
+    }
   }
 
   console.log("[build-esbuild] Finish operating");

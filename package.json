@@ -3,14 +3,22 @@
   "version": "0.1.0",
   "description": "Build typescript files from source folder to build folder",
   "main": "./build/bin/index.js",
+  "types": "./build/bin/index.d.ts",
+  "module": "./build/bin/index.mjs",
   "bin": {
     "build-esbuild": "./build/bin/index.js"
   },
   "scripts": {
     "test": "echo \"test\"",
-    "build": "npm run build:esbuild && npm run build:cli",
-    "build:esbuild": "esbuild src/esbuild.config.ts --format=esm --platform=node --outfile=build/esbuild.config.mjs --external:./node_modules/* --target=ESNEXT --minify --allow-overwrite",
-    "build:cli": "esbuild src/bin/index.ts --format=esm --platform=node --outfile=build/bin/index.mjs --external:./node_modules/* --target=ESNEXT --minify --allow-overwrite"
+    "prepublish": "npm run build && npm run declaration",
+    "build": "npm run build:esm && npm run build:cjs",
+    "build:esm": "npm run esm:esbuild && npm run esm:cli",
+    "build:cjs": "npm run cjs:esbuild && npm run cjs:cli",
+    "esm:esbuild": "esbuild src/esbuild.config.ts --format=esm --platform=node --outfile=build/esbuild.config.mjs --target=ESNEXT --allow-overwrite",
+    "esm:cli": "esbuild src/bin/index.ts --format=esm --platform=node --outfile=build/bin/index.mjs --target=ESNEXT --allow-overwrite",
+    "cjs:esbuild": "esbuild src/esbuild.config.ts --format=cjs --platform=node --outfile=build/esbuild.config.js --target=ESNEXT --allow-overwrite",
+    "cjs:cli": "esbuild src/bin/index.ts --format=cjs --platform=node --outfile=build/bin/index.js --target=ESNEXT --allow-overwrite",
+    "declaration": "npx tsc --project tsconfig.json"
   },
   "repository": {
     "type": "git",
@@ -33,5 +41,8 @@
   "devDependencies": {
     "@types/node": "^18.11.19",
     "typescript": "^4.9.5"
-  }
+  },
+  "files": [
+    "/build"
+  ]
 }

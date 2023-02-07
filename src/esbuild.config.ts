@@ -14,6 +14,7 @@ import { nodeExternalsPlugin } from "esbuild-node-externals";
 import readline from "readline";
 import { Parser } from "acorn";
 import acorn_jsx from "acorn-jsx";
+import { exit } from "process";
 
 // Would love to do the whole thing, but don't have time.
 interface DefaultAcornNode {
@@ -115,13 +116,49 @@ type AcornNodes =
   | ImportSpecifierAcornNode
   | VariableDeclarationAcornNode;
 
-export async function build(
-  sourceDirectory: string = "src",
-  outputDirectory: string = "build",
-  outputFormat: esbuild.Format = "esm",
-  minifying: boolean = false,
-  clearPreviousBuild: boolean = true
-) {
+interface buildInterface {
+  /**
+   * {string} The Source Directory of the original files - Default: src
+   */
+  sourceDirectory: string;
+  /**
+   * {string} The Output DIrectory of the transpiled files - Default: build
+   */
+  outputDirectory: string;
+  /**
+   * {esbuild.Format} The Output Format of the transpiled files - Default: esm
+   */
+  outputFormat: esbuild.Format;
+  /**
+   * {boolean} Option to minify the transpiled files - Default: false
+   */
+  minifying: boolean;
+  /**
+   * {boolean} Option to delete the output folder before new build - Default: true
+   */
+  clearPreviousBuild: boolean;
+  /**
+   * {boolean} Option to print every steps of the program - Default: false
+   */
+  verbose?: boolean;
+}
+/**
+ * Transpiled the files within the source firectory to the output directory.
+ * @param .sourceDirectory {string} Source directory
+ * @param .outputDirectory {string} Output directory
+ * @param .outputFormat {esbuild.Format} Output format
+ * @param .minifying {boolean} Option to minify
+ * @param .clearPreviousBuild {boolean} Option to clear old build
+ * @param .verbose {boolean} Option to print each steps
+ */
+export async function build({
+  sourceDirectory = "src",
+  outputDirectory = "build",
+  outputFormat = "esm",
+  minifying = false,
+  clearPreviousBuild = true,
+  verbose = false,
+}: buildInterface) {
   // Options
   const _sourceDirectory: string = sourceDirectory;
   const _outputDirectory: string = outputDirectory;
@@ -129,11 +166,57 @@ export async function build(
   const _minifying: boolean = minifying;
   const _clearPreviousBuild: boolean = clearPreviousBuild;
 
+  // Verbose options
+  if (verbose) {
+    console.log("[build-esbuild] Build with the following options");
+    console.log(`[build-esbuild] Source folder: ${_sourceDirectory}`);
+    console.log(`[build-esbuild] Output folder: ${_outputDirectory}`);
+    console.log(`[build-esbuild] Output format: ${_outputFormat}`);
+    console.log(`[build-esbuild] Minify files: ${_minifying}`);
+    console.log(`[build-esbuild] Clear old build: ${_clearPreviousBuild}`);
+    console.log(`[build-esbuild] Verbose build: ${verbose}`);
+  }
+
   // Starts by creating empty arrays, and lists all of the affected files
   const entryPoints: string[] = [];
   const folderLookups: string[] = [""];
   const outtypeFormat: string = _outputFormat === "esm" ? "mjs" : "js";
   const otherFiles: string[] = [];
+
+  // If clear old build
+  if (_clearPreviousBuild) {
+    if (verbose) {
+      console.log(
+        "[build-esbuild] Clear previous build enable. Detecting build folder."
+      );
+    }
+
+    const outFolder = join(process.cwd(), _outputDirectory);
+    // Create output folder
+    if (existsSync(outFolder)) {
+      if (verbose) {
+        console.log(
+          "[build-esbuild] Old build folder found. Deleting old build folder."
+        );
+      }
+      rmSync(outFolder, { recursive: true });
+    } else {
+      if (verbose) {
+        console.log("[build-esbuild] Old build folder not found. Proceed.");
+      }
+    }
+
+    if (verbose) {
+      console.log("[build-esbuild] Creating new build folder.");
+    }
+    mkdirSync(outFolder);
+  }
+
+  if (verbose) {
+    console.log(
+      "[build-esbuild] [Start] Scan files within the source directory"
+    );
+  }
   for (const folder of folderLookups) {
     readdirSync(join(process.cwd(), _sourceDirectory, folder)).filter(
       (fileCandidate) => {
@@ -151,20 +234,49 @@ export async function build(
       }
     );
   }
-  // Create output folder
-  const outFolder = join(process.cwd(), _outputDirectory);
-  if (existsSync(outFolder)) {
-    rmSync(outFolder, { recursive: true });
+  if (verbose) {
+    console.log(
+      "[build-esbuild] [Finish] Scanning files within the source directory"
+    );
+    console.log("[build-esbuild] [List] Files are as follows");
+    console.log("\n");
+    console.log(`Number of files to transpiled: ${entryPoints.length}`);
+    console.log("=== Files to transpiled ===");
+    for (const file of entryPoints) {
+      console.log(file);
+    }
+    console.log("\n");
+    console.log(`Number of other files to copy: ${otherFiles.length}`);
+    console.log("=== Files to copy ===");
+    for (const file of otherFiles) {
+      console.log(file);
+    }
   }
-  mkdirSync(outFolder);
+
+  if (verbose) {
+    console.log("[build-esbuild] [Start] Copy other files to output directory");
+  }
   // Copy all files that don't need to be transpiled
-  for (const fileName of otherFiles) {
-    const unformatRawFile = path.parse(join(_outputDirectory, fileName));
-    const formattedRawFilePath = `${unformatRawFile.dir}/${
-      unformatRawFile.name
-    }${unformatRawFile.ext !== "" ? `.${unformatRawFile.ext}` : ""}`;
-    const originalFilePath = join(_sourceDirectory, fileName);
-    copyFileSync(originalFilePath, formattedRawFilePath);
+  try {
+    for (const fileName of otherFiles) {
+      const unformatRawFile = path.parse(join(_outputDirectory, fileName));
+      const formattedRawFilePath = `${unformatRawFile.dir}/${
+        unformatRawFile.name
+      }${unformatRawFile.ext !== "" ? `.${unformatRawFile.ext}` : ""}`;
+      const originalFilePath = join(_sourceDirectory, fileName);
+      copyFileSync(originalFilePath, formattedRawFilePath);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+  if (verbose) {
+    console.log(
+      "[build-esbuild] [Finish] Copy other files to output directory"
+    );
+  }
+
+  if (verbose) {
+    console.log("[build-esbuild] [Start] Transpiled files using esbuild");
   }
   // Transpiled files
   await esbuild
@@ -190,8 +302,17 @@ export async function build(
     .catch((e) => {
       console.log(e);
     });
+  if (verbose) {
+    console.log("[build-esbuild] [Finish] Transpiled files using esbuild");
+  }
+
   // If output is in ECMAScript, import of local files must be fix
   if (_outputFormat === "esm") {
+    if (verbose) {
+      console.log(
+        `[build-esbuild] Output format is: ${_outputFormat}. Fixing local import.`
+      );
+    }
     await esmUpdateLocalImport(entryPoints)
       .then((r) => {
         console.log(r);
@@ -201,36 +322,59 @@ export async function build(
         console.log(er);
       });
   }
-  async function esmUpdateLocalImport(entryPoints: string[]) {
+
+  if (verbose) {
+    console.log("[build-esbuild] Finish operating");
+  }
+
+  /**
+   * Fixing import if output format is in esm (ECMAScript)
+   * @param entryPoints {string[]} The paths of files to fix import
+   * @returns {Promise<boolean>} Return true if success, otherwise throw an Error.
+   */
+  async function esmUpdateLocalImport(entryPoints: string[]): Promise<boolean> {
     for (let index = 0; index < entryPoints.length; index++) {
       const fileName = entryPoints[index];
       let hasUpdateImport = false;
       let correctedLine = "";
       const unformatRawFile = path.parse(join(_outputDirectory, fileName));
       const formattedRawFilePath = `${unformatRawFile.dir}/${unformatRawFile.name}.${outtypeFormat}`;
+      if (verbose) {
+        console.log(
+          `[build-esbuild] [Start] Fix local import on file : ${formattedRawFilePath}`
+        );
+      }
       await new Promise<boolean>((resolve, reject) => {
         try {
           const reader = readline.createInterface({
             input: createReadStream(formattedRawFilePath).on(
               "error",
               (error) => {
-                console.log("Create Read Stream Error");
+                console.error("Create Read Stream Error");
                 console.error(error);
               }
             ),
             crlfDelay: Infinity,
           });
+          let tempReadline = "";
           reader
             .on("line", (rline) => {
+              tempReadline += rline;
               try {
-                const codeStructure = Parser.extend(acorn_jsx()).parse(rline, {
-                  ecmaVersion: "latest",
-                  sourceType: "module",
-                }) as unknown as ProgramAcornNode;
+                // [1] Try parsing the currently read lines as code
+                const codeStructure = Parser.extend(acorn_jsx()).parse(
+                  tempReadline,
+                  {
+                    ecmaVersion: "latest",
+                    sourceType: "module",
+                  }
+                ) as unknown as ProgramAcornNode;
+                // If parsed successfully, read the structure of the code
                 const codeBody = codeStructure.body;
                 for (let index = 0; index < codeBody.length; index++) {
                   const codeLine = codeBody[index];
                   try {
+                    //
                     if (codeLine.type === "ImportDeclaration") {
                       const pathCandidate = rline
                         .substring(
@@ -265,12 +409,13 @@ export async function build(
                   }
                 }
               } catch (error) {
-                console.log("Parse Error");
-                console.log(rline);
+                // Line was not a full line of code
+                console.error("Parse Error");
+                console.error(rline);
+                console.error(error);
               }
             })
             .on("close", () => {
-              console.log(`${fileName} has been scanned`);
               resolve(true);
             });
         } catch (e) {
@@ -278,10 +423,20 @@ export async function build(
         }
       });
       if (hasUpdateImport) {
-        console.log(join(process.cwd(), formattedRawFilePath));
+        if (verbose) {
+          if (verbose) {
+            console.log("[build-esbuild] [Finish] Fix local import");
+          }
+        }
         writeFileSync(formattedRawFilePath, correctedLine, {
           flag: "w",
         });
+      } else {
+        if (verbose) {
+          if (verbose) {
+            console.log("[build-esbuild] [Finish] No local import to fix");
+          }
+        }
       }
     }
     return true;

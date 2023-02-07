@@ -166,6 +166,8 @@ export async function build({
   const _minifying: boolean = minifying;
   const _clearPreviousBuild: boolean = clearPreviousBuild;
 
+  console.log("[build-esbuild] Start operating");
+
   // Verbose options
   if (verbose) {
     console.log("[build-esbuild] Build with the following options");
@@ -323,9 +325,7 @@ export async function build({
       });
   }
 
-  if (verbose) {
-    console.log("[build-esbuild] Finish operating");
-  }
+  console.log("[build-esbuild] Finish operating");
 
   /**
    * Fixing import if output format is in esm (ECMAScript)

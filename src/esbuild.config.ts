@@ -7,6 +7,7 @@ import {
   createReadStream,
   writeFileSync,
   copyFileSync,
+  readFileSync,
 } from "fs";
 import path, { join } from "path";
 import esbuild from "esbuild";
@@ -14,7 +15,6 @@ import { nodeExternalsPlugin } from "esbuild-node-externals";
 import readline from "readline";
 import { Parser } from "acorn";
 import acorn_jsx from "acorn-jsx";
-import { exit } from "process";
 
 // Would love to do the whole thing, but don't have time.
 interface DefaultAcornNode {
@@ -262,9 +262,10 @@ export async function build({
   try {
     for (const fileName of otherFiles) {
       const unformatRawFile = path.parse(join(_outputDirectory, fileName));
-      const formattedRawFilePath = `${unformatRawFile.dir}/${
-        unformatRawFile.name
-      }${unformatRawFile.ext !== "" ? `.${unformatRawFile.ext}` : ""}`;
+      if (!existsSync(unformatRawFile.dir)) {
+        mkdirSync(unformatRawFile.dir, { recursive: true });
+      }
+      const formattedRawFilePath = `${unformatRawFile.dir}/${unformatRawFile.name}${unformatRawFile.ext}`;
       const originalFilePath = join(_sourceDirectory, fileName);
       copyFileSync(originalFilePath, formattedRawFilePath);
     }
@@ -352,98 +353,111 @@ export async function build({
           `[build-esbuild] [Start] Fix local import on file : ${formattedRawFilePath}`
         );
       }
-      await new Promise<boolean>((resolve, reject) => {
-        try {
-          const reader = readline.createInterface({
-            input: createReadStream(formattedRawFilePath).on(
-              "error",
-              (error) => {
-                console.error("Create Read Stream Error");
-                console.error(error);
+      const codes = readFileSync(formattedRawFilePath).toString();
+      // await new Promise<boolean>((resolve, reject) => {
+      //   try {
+      //     const reader = readline.createInterface({
+      //       input: createReadStream(formattedRawFilePath).on(
+      //         "error",
+      //         (error) => {
+      //           if (verbose) {
+      //             console.error("Create Read Stream Error");
+      //             console.error(error);
+      //           }
+      //         }
+      //       ),
+      //       crlfDelay: Infinity,
+      //     });
+      //     let tempReadline = "";
+      //     reader
+      //       .on("line", (rline) => {
+      //         // Buffer
+      //         tempReadline += rline;F
+      try {
+        // Try parsing the codes
+        const codeStructure = Parser.extend(acorn_jsx()).parse(codes, {
+          ecmaVersion: "latest",
+          sourceType: "module",
+        }) as unknown as ProgramAcornNode;
+        // If parsed successfully, read the structure of the code
+        const codeBody = codeStructure.body;
+        for (let index = 0; index < codeBody.length; index++) {
+          const codeLine = codeBody[index];
+          try {
+            // If the current structure is an import line, scan if import is local then fix the import.
+            if (codeLine.type === "ImportDeclaration") {
+              // Get the import
+              const pathCandidate = codes
+                .substring(codeLine.source.start + 1, codeLine.source.end - 1)
+                .trim();
+              // Convert to path
+              const importPath = join(
+                unformatRawFile.dir,
+                `${pathCandidate}.${outtypeFormat}`
+              );
+              // Check if import is local
+              if (existsSync(importPath)) {
+                // Import is local. Fix the file type.
+                correctedLine +=
+                  `\n${codes.substring(
+                    codeLine.start,
+                    codeLine.source.end - 1
+                  )}.${outtypeFormat}${codes.substring(
+                    codeLine.source.end - 1,
+                    codeLine.end
+                  )}`;
+                hasUpdateImport = true;
+              } else {
+                // If import is not local, copy.
+                throw new Error("Import is not local file");
               }
-            ),
-            crlfDelay: Infinity,
-          });
-          let tempReadline = "";
-          reader
-            .on("line", (rline) => {
-              tempReadline += rline;
-              try {
-                // [1] Try parsing the currently read lines as code
-                const codeStructure = Parser.extend(acorn_jsx()).parse(
-                  tempReadline,
-                  {
-                    ecmaVersion: "latest",
-                    sourceType: "module",
-                  }
-                ) as unknown as ProgramAcornNode;
-                // If parsed successfully, read the structure of the code
-                const codeBody = codeStructure.body;
-                for (let index = 0; index < codeBody.length; index++) {
-                  const codeLine = codeBody[index];
-                  try {
-                    //
-                    if (codeLine.type === "ImportDeclaration") {
-                      const pathCandidate = rline
-                        .substring(
-                          codeLine.source.start + 1,
-                          codeLine.source.end - 1
-                        )
-                        .trim();
-                      const importPath = join(
-                        unformatRawFile.dir,
-                        `${pathCandidate}.${outtypeFormat}`
-                      );
-                      if (existsSync(importPath)) {
-                        correctedLine += `${rline.substring(
-                          codeLine.start,
-                          codeLine.source.end - 1
-                        )}.${outtypeFormat}${rline.substring(
-                          codeLine.source.end - 1,
-                          codeLine.end
-                        )}`;
-                        hasUpdateImport = true;
-                      } else {
-                        throw new Error("Import is not local file");
-                      }
-                    } else {
-                      throw new Error("Not an Import statement");
-                    }
-                  } catch (e) {
-                    correctedLine += rline.substring(
-                      codeLine.start,
-                      codeLine.end
-                    );
-                  }
-                }
-              } catch (error) {
-                // Line was not a full line of code
-                console.error("Parse Error");
-                console.error(rline);
-                console.error(error);
-              }
-            })
-            .on("close", () => {
-              resolve(true);
-            });
-        } catch (e) {
-          reject(`Update error on file name: ${fileName}`);
+            } else {
+              // If structure is not import, copy.
+              throw new Error("Not an Import statement");
+            }
+          } catch (e) {
+            // Structure does not need to be fix. Copy to new file
+            if (verbose) {
+              const err = e as Error;
+              console.log(err.message);
+            }
+            correctedLine +=
+              "\n" + codes.substring(codeLine.start, codeLine.end);
+          } finally {
+            if (index === 0) {
+              correctedLine = correctedLine.trimStart();
+            }
+          }
         }
-      });
+        // If line parsed succesfully, clear buffer
+        //     tempReadline = "";
+        //   } catch (error) {
+        //     // Line was not a full line of code
+        //     if (verbose) {
+        //       console.error("Parse Error");
+        //       console.error(tempReadline);
+        //       console.error(error);
+        //     }
+        //   }
+        // })
+        // .on("close", () => {
+        //   resolve(true);
+        // });
+      } catch (e) {
+        // reject(`Update error on file name: ${fileName}`);
+        console.error(`Update error on file name: ${fileName}`);
+      }
+      // });
       if (hasUpdateImport) {
         if (verbose) {
-          if (verbose) {
-            console.log("[build-esbuild] [Finish] Fix local import");
-          }
+          console.log("[build-esbuild] [Finish] Fix local import");
         }
         writeFileSync(formattedRawFilePath, correctedLine, {
           flag: "w",
         });
       } else {
         if (verbose) {
-          if (verbose) {
-            console.log("[build-esbuild] [Finish] No local import to fix");
-          }
+          console.log("[build-esbuild] [Finish] No local import to fix");
         }
       }
     }

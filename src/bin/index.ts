@@ -1,9 +1,11 @@
+#!/usr/bin/env node
 import { build } from "../esbuild.config";
+import type { Format } from "esbuild";
 import yargs from "yargs";
 
 const scriptname = "build-esbuild";
 
-const usage = `${scriptname} --source=<src> --output=<output> [options]`;
+const usage = `${scriptname} -s <source> -o <output> [options]`;
 
 const options = yargs
   .scriptName(scriptname)
@@ -27,6 +29,7 @@ const options = yargs
     default: "cjs",
     describe: "Options of the format of the transpiled files",
     type: "string",
+    choices: ["cjs", "esm", "iife"],
   })
   .options("m", {
     alias: ["mn", "minify"],
@@ -46,17 +49,18 @@ const options = yargs
     describe: "Options to print steps verbosely",
     type: "boolean",
   })
-  .help(true).argv;
+  .help(true)
+  .parseSync();
 
 async function run() {
   await new Promise<boolean>((resolve, reject) => {
     build({
-      sourceDirectory: "src",
-      outputDirectory: "build",
-      outputFormat: "cjs",
-      minifying: false,
-      clearPreviousBuild: true,
-      verbose: false,
+      sourceDirectory: options.s,
+      outputDirectory: options.o,
+      outputFormat: options.f as Format,
+      minifying: options.m,
+      clearPreviousBuild: options.d,
+      verbose: options.v,
     })
       .then(() => {
         resolve(true);

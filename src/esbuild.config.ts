@@ -12,7 +12,6 @@ import {
 import path, { join } from "path";
 import esbuild from "esbuild";
 import { nodeExternalsPlugin } from "esbuild-node-externals";
-import readline from "readline";
 import { Parser } from "acorn";
 import acorn_jsx from "acorn-jsx";
 
@@ -300,10 +299,16 @@ export async function build({
       plugins: [nodeExternalsPlugin()],
     })
     .then((res) => {
-      console.log(res);
+      if (verbose) {
+        console.log("[build-esbuild] esbuild finish with the following result");
+        console.log(res);
+      }
     })
     .catch((e) => {
-      console.log(e);
+      if (verbose) {
+        console.log("[build-esbuild] esbuild error with the following result");
+        console.error(e);
+      }
     });
   if (verbose) {
     console.log("[build-esbuild] [Finish] Transpiled files using esbuild");
@@ -321,13 +326,19 @@ export async function build({
     }
     await esmUpdateLocalImport(entryPoints)
       .then((r) => {
-        if (r) {
+        if (verbose) {
+          console.log(
+            "[build-esbuild] Fix local import finish with the result"
+          );
+          console.log(r);
         }
-        console.log(r);
       })
       .catch((er) => {
-        console.error("ECMA Fix Error");
-        console.error(er);
+        if (verbose) {
+          console.log("[build-esbuild] Fix local import error with the result");
+          console.error("ECMA Fix Error");
+          console.error(er);
+        }
       });
     if (verbose) {
       console.log("[build-esbuild] [Finish] Fixing local import.");
@@ -398,14 +409,13 @@ export async function build({
               // Check if import is local
               if (existsSync(importPath)) {
                 // Import is local. Fix the file type.
-                correctedLine +=
-                  `\n${codes.substring(
-                    codeLine.start,
-                    codeLine.source.end - 1
-                  )}.${outtypeFormat}${codes.substring(
-                    codeLine.source.end - 1,
-                    codeLine.end
-                  )}`;
+                correctedLine += `\n${codes.substring(
+                  codeLine.start,
+                  codeLine.source.end - 1
+                )}.${outtypeFormat}${codes.substring(
+                  codeLine.source.end - 1,
+                  codeLine.end
+                )}`;
                 hasUpdateImport = true;
               } else {
                 // If import is not local, copy.

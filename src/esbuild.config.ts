@@ -114,7 +114,7 @@ type AcornNodes =
   | ImportSpecifierAcornNode
   | VariableDeclarationAcornNode;
 
-interface buildInterface {
+export interface buildInterface {
   /**
    * {string} The Source Directory of the original files - Default: src
    */

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { build } from "../esbuild.config";
+import { build, buildInterface } from "../esbuild.config";
 import type { Format } from "esbuild";
 import yargs from "yargs";
 
@@ -52,15 +52,15 @@ const options = yargs
   .help(true)
   .parseSync();
 
-async function run() {
+async function run(options: buildInterface) {
   await new Promise<boolean>((resolve, reject) => {
     build({
-      sourceDirectory: options.s,
-      outputDirectory: options.o,
-      outputFormat: options.f as Format,
-      minifying: options.m,
-      clearPreviousBuild: options.d,
-      verbose: options.v,
+      sourceDirectory: options.sourceDirectory,
+      outputDirectory: options.outputDirectory,
+      outputFormat: options.outputFormat,
+      minifying: options.minifying,
+      clearPreviousBuild: options.clearPreviousBuild,
+      verbose: options.verbose,
     })
       .then(() => {
         resolve(true);
@@ -70,4 +70,13 @@ async function run() {
       });
   });
 }
-run();
+run({
+  sourceDirectory: options.s,
+  outputDirectory: options.o,
+  outputFormat: options.f as Format,
+  minifying: options.m,
+  clearPreviousBuild: options.d,
+  verbose: options.v,
+});
+
+export { run };

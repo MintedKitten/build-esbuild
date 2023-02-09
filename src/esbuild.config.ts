@@ -238,19 +238,19 @@ export async function build({
     console.log(
       "[build-esbuild] [Finish] Scanning files within the source directory"
     );
+    console.log();
     console.log("[build-esbuild] [List] Files are as follows");
-    console.log("\n");
     console.log(`Number of files to transpiled: ${entryPoints.length}`);
     console.log("=== Files to transpiled ===");
     for (const file of entryPoints) {
       console.log(file);
     }
-    console.log("\n");
     console.log(`Number of other files to copy: ${otherFiles.length}`);
     console.log("=== Files to copy ===");
     for (const file of otherFiles) {
       console.log(file);
     }
+    console.log();
   }
 
   if (verbose) {
@@ -364,25 +364,6 @@ export async function build({
         );
       }
       const codes = readFileSync(formattedRawFilePath).toString();
-      // await new Promise<boolean>((resolve, reject) => {
-      //   try {
-      //     const reader = readline.createInterface({
-      //       input: createReadStream(formattedRawFilePath).on(
-      //         "error",
-      //         (error) => {
-      //           if (verbose) {
-      //             console.error("Create Read Stream Error");
-      //             console.error(error);
-      //           }
-      //         }
-      //       ),
-      //       crlfDelay: Infinity,
-      //     });
-      //     let tempReadline = "";
-      //     reader
-      //       .on("line", (rline) => {
-      //         // Buffer
-      //         tempReadline += rline;F
       try {
         // Try parsing the codes
         const codeStructure = Parser.extend(acorn_jsx()).parse(codes, {
@@ -400,14 +381,27 @@ export async function build({
               const pathCandidate = codes
                 .substring(codeLine.source.start + 1, codeLine.source.end - 1)
                 .trim();
+              if (verbose) {
+                console.log(`pathCandidate: ${pathCandidate}`);
+              }
               // Convert to path
-              const importPath = join(
+              const importFilePath = join(
                 unformatRawFile.dir,
                 `${pathCandidate}.${outtypeFormat}`
               );
-              // Check if import is local
-              if (existsSync(importPath)) {
-                // Import is local. Fix the file type.
+              const importDefaultFilePath = join(
+                unformatRawFile.dir,
+                pathCandidate,
+                `index.${outtypeFormat}`
+              );
+              const importDefaultFileJSPath = join(
+                unformatRawFile.dir,
+                pathCandidate,
+                "index.js"
+              );
+              // Check if import is local file
+              if (existsSync(importFilePath)) {
+                // Import is local file. Fix the import path.
                 correctedLine += `\n${codes.substring(
                   codeLine.start,
                   codeLine.source.end - 1
@@ -416,16 +410,52 @@ export async function build({
                   codeLine.end
                 )}`;
                 hasUpdateImport = true;
+                if (verbose) {
+                  console.log(
+                    `Import fixed: ${pathCandidate}.${outtypeFormat}`
+                  );
+                }
+              } else if (existsSync(importDefaultFilePath)) {
+                // Import is default index.ts. Fix the import path
+                // Check if folder import ends with '/'; If true, remove it
+                let front = codes.substring(
+                  codeLine.start,
+                  codeLine.source.end - 1
+                );
+                if (front[front.length - 1] === "/") {
+                  front = front.slice(0, -1);
+                }
+                correctedLine += `\n${front}/index.${outtypeFormat}${codes.substring(
+                  codeLine.source.end - 1,
+                  codeLine.end
+                )}`;
+                hasUpdateImport = true;
+                if (verbose) {
+                  console.log(
+                    `Import fixed: ${
+                      pathCandidate[pathCandidate.length - 1] === "/"
+                        ? pathCandidate.slice(0, -1)
+                        : pathCandidate
+                    }/index.${outtypeFormat}`
+                  );
+                }
+              } else if (existsSync(importDefaultFileJSPath)) {
+                // Import is default index.js. copy.
+                throw new Error("Import is default index.js. No fix needed.");
               } else {
                 // If import is not local, copy.
                 throw new Error("Import is not local file");
               }
             } else {
               // If structure is not import, copy.
-              throw new Error("Not an Import statement");
+              throw new Error(
+                `Not an Import statement: ${codes
+                  .substring(codeLine.start, codeLine.end)
+                  .trim()}`
+              );
             }
           } catch (e) {
-            // Structure does not need to be fix. Copy to new file
+            // Structure does not need to be fix. Copy to new file.
             if (verbose) {
               const err = e as Error;
               console.log(err.message);
@@ -438,25 +468,9 @@ export async function build({
             }
           }
         }
-        // If line parsed succesfully, clear buffer
-        //     tempReadline = "";
-        //   } catch (error) {
-        //     // Line was not a full line of code
-        //     if (verbose) {
-        //       console.error("Parse Error");
-        //       console.error(tempReadline);
-        //       console.error(error);
-        //     }
-        //   }
-        // })
-        // .on("close", () => {
-        //   resolve(true);
-        // });
       } catch (e) {
-        // reject(`Update error on file name: ${fileName}`);
         console.error(`Update error on file name: ${fileName}`);
       }
-      // });
       if (hasUpdateImport) {
         if (verbose) {
           console.log("[build-esbuild] [Finish] Fix local import");

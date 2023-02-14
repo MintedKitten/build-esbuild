@@ -50,6 +50,7 @@ const options = yargs
     type: "boolean",
   })
   .help(true)
+  .strict()
   .parseSync();
 
 async function run(options: buildInterface) {

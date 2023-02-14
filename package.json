@@ -1,6 +1,6 @@
 {
   "name": "build-esbuild",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Build typescript files from source folder to build folder",
   "main": "./build/bin/index.js",
   "types": "./build/bin/index.d.ts",

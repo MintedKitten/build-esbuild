@@ -50,17 +50,23 @@ const options = import_yargs.default.scriptName(scriptname).usage(usage).options
   type: "string"
 }).options("f", {
   alias: ["fmt", "format"],
+  choices: ["cjs", "esm", "iife"],
   default: "cjs",
   describe: "Options of the format of the transpiled files",
-  type: "string",
-  choices: ["cjs", "esm", "iife"]
+  type: "string"
+}).options("x", {
+  alias: ["file", "type", "filetype", "ext", "extension", "fileExtension"],
+  choices: ["js", "mjs"],
+  default: "js",
+  describe: "Options of the file extension of the transpiled files",
+  type: "string"
 }).options("m", {
   alias: ["mn", "minify"],
   default: false,
   describe: "Option to minify the output files",
   type: "boolean"
 }).options("d", {
-  alias: ["del", "clear", "clearPreviousBuild"],
+  alias: ["del", "delete", "clear", "clearPreviousBuild"],
   default: true,
   describe: "Options to delete the old build folder",
   type: "boolean"
@@ -76,6 +82,7 @@ async function run(options2) {
       sourceDirectory: options2.sourceDirectory,
       outputDirectory: options2.outputDirectory,
       outputFormat: options2.outputFormat,
+      outputExtension: options2.outputExtension,
       minifying: options2.minifying,
       clearPreviousBuild: options2.clearPreviousBuild,
       verbose: options2.verbose
@@ -90,6 +97,7 @@ run({
   sourceDirectory: options.s,
   outputDirectory: options.o,
   outputFormat: options.f,
+  outputExtension: options.x,
   minifying: options.m,
   clearPreviousBuild: options.d,
   verbose: options.v

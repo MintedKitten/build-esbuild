@@ -114,6 +114,8 @@ type AcornNodes =
   | ImportSpecifierAcornNode
   | VariableDeclarationAcornNode;
 
+export type outputExtension = "js" | "mjs";
+
 export interface buildInterface {
   /**
    * {string} The Source Directory of the original files - Default: src
@@ -127,6 +129,10 @@ export interface buildInterface {
    * {esbuild.Format} The Output Format of the transpiled files - Default: esm
    */
   outputFormat: esbuild.Format;
+  /**
+   * {string} The Output File Extension of the transpiled files - Default: mjs
+   */
+  outputExtension: outputExtension;
   /**
    * {boolean} Option to minify the transpiled files - Default: false
    */
@@ -153,6 +159,7 @@ export async function build({
   sourceDirectory = "src",
   outputDirectory = "build",
   outputFormat = "esm",
+  outputExtension = "mjs",
   minifying = false,
   clearPreviousBuild = true,
   verbose = false,
@@ -180,7 +187,7 @@ export async function build({
   // Starts by creating empty arrays, and lists all of the affected files
   const entryPoints: string[] = [];
   const folderLookups: string[] = [""];
-  const outtypeFormat: string = _outputFormat === "esm" ? "mjs" : "js";
+  const outtypeFormat: string = outputExtension;
   const otherFiles: string[] = [];
 
   // If clear old build

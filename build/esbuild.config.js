@@ -41,6 +41,7 @@ async function build({
   sourceDirectory = "src",
   outputDirectory = "build",
   outputFormat = "esm",
+  outputExtension = "mjs",
   minifying = false,
   clearPreviousBuild = true,
   verbose = false
@@ -62,7 +63,7 @@ async function build({
   }
   const entryPoints = [];
   const folderLookups = [""];
-  const outtypeFormat = _outputFormat === "esm" ? "mjs" : "js";
+  const outtypeFormat = outputExtension;
   const otherFiles = [];
   if (_clearPreviousBuild) {
     if (verbose) {

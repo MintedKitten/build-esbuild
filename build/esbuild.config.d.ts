@@ -1,4 +1,5 @@
 import esbuild from "esbuild";
+export type outputExtension = "js" | "mjs";
 export interface buildInterface {
     /**
      * {string} The Source Directory of the original files - Default: src
@@ -12,6 +13,10 @@ export interface buildInterface {
      * {esbuild.Format} The Output Format of the transpiled files - Default: esm
      */
     outputFormat: esbuild.Format;
+    /**
+     * {string} The Output File Extension of the transpiled files - Default: mjs
+     */
+    outputExtension: outputExtension;
     /**
      * {boolean} Option to minify the transpiled files - Default: false
      */
@@ -34,4 +39,4 @@ export interface buildInterface {
  * @param .clearPreviousBuild {boolean} Option to clear old build
  * @param .verbose {boolean} Option to print each steps
  */
-export declare function build({ sourceDirectory, outputDirectory, outputFormat, minifying, clearPreviousBuild, verbose, }: buildInterface): Promise<void>;
+export declare function build({ sourceDirectory, outputDirectory, outputFormat, outputExtension, minifying, clearPreviousBuild, verbose, }: buildInterface): Promise<void>;

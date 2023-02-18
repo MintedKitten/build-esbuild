@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { build, buildInterface } from "../esbuild.config";
+import { build, buildInterface, outputExtension } from "../esbuild.config";
 import type { Format } from "esbuild";
 import yargs from "yargs";
 
@@ -26,10 +26,17 @@ const options = yargs
   })
   .options("f", {
     alias: ["fmt", "format"],
+    choices: ["cjs", "esm", "iife"],
     default: "cjs",
     describe: "Options of the format of the transpiled files",
     type: "string",
-    choices: ["cjs", "esm", "iife"],
+  })
+  .options("x", {
+    alias: ["file", "type", "filetype", "ext", "extension", "fileExtension"],
+    choices: ["js", "mjs"],
+    default: "js",
+    describe: "Options of the file extension of the transpiled files",
+    type: "string",
   })
   .options("m", {
     alias: ["mn", "minify"],
@@ -38,7 +45,7 @@ const options = yargs
     type: "boolean",
   })
   .options("d", {
-    alias: ["del", "clear", "clearPreviousBuild"],
+    alias: ["del", "delete", "clear", "clearPreviousBuild"],
     default: true,
     describe: "Options to delete the old build folder",
     type: "boolean",
@@ -59,6 +66,7 @@ async function run(options: buildInterface) {
       sourceDirectory: options.sourceDirectory,
       outputDirectory: options.outputDirectory,
       outputFormat: options.outputFormat,
+      outputExtension: options.outputExtension,
       minifying: options.minifying,
       clearPreviousBuild: options.clearPreviousBuild,
       verbose: options.verbose,
@@ -75,6 +83,7 @@ run({
   sourceDirectory: options.s,
   outputDirectory: options.o,
   outputFormat: options.f as Format,
+  outputExtension: options.x as outputExtension,
   minifying: options.m,
   clearPreviousBuild: options.d,
   verbose: options.v,

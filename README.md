@@ -8,7 +8,7 @@ Either install this package as dev dependency, or use it as NPM Package Runner (
 ## Example
 ```sh
 // Install as dev dependency
-npm i build-esbuild
+npm i -D build-esbuild
 build-esbuild -s src -o dist
 // Use NPM Package Runner (npx)
 npx build-esbuild --help

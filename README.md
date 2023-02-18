@@ -3,12 +3,18 @@
 # build-esbuild
 
 Transpiling typescript files and copy every other files in source folder to output folder.
+Either install this package as dev dependency, or use it as NPM Package Runner (npx)
 
 ## Example
 ```sh
-build-esbuild --help
+// Install as dev dependency
+npm i build-esbuild
 build-esbuild -s src -o dist
-build-esbuild -s src -o dist -f esm -m true -d true -v
+// Use NPM Package Runner (npx)
+npx build-esbuild --help
+npx build-esbuild -s src -o dist
+npx build-esbuild -s src -o dist -m
+npx build-esbuild -s src -o dist -f esm -x mjs -m true -d true -v true
 ```
 
 ## License

@@ -168,6 +168,7 @@ export async function build({
   const _sourceDirectory: string = sourceDirectory;
   const _outputDirectory: string = outputDirectory;
   const _outputFormat: esbuild.Format = outputFormat;
+  const _outtypeFormat: string = outputExtension;
   const _minifying: boolean = minifying;
   const _clearPreviousBuild: boolean = clearPreviousBuild;
 
@@ -179,6 +180,7 @@ export async function build({
     console.log(`[build-esbuild] Source folder: ${_sourceDirectory}`);
     console.log(`[build-esbuild] Output folder: ${_outputDirectory}`);
     console.log(`[build-esbuild] Output format: ${_outputFormat}`);
+    console.log(`[build-esbuild] Output Extension: ${_outtypeFormat}`);
     console.log(`[build-esbuild] Minify files: ${_minifying}`);
     console.log(`[build-esbuild] Clear old build: ${_clearPreviousBuild}`);
     console.log(`[build-esbuild] Verbose build: ${verbose}`);
@@ -187,7 +189,6 @@ export async function build({
   // Starts by creating empty arrays, and lists all of the affected files
   const entryPoints: string[] = [];
   const folderLookups: string[] = [""];
-  const outtypeFormat: string = outputExtension;
   const otherFiles: string[] = [];
 
   // If clear old build
@@ -293,7 +294,7 @@ export async function build({
         return join(_sourceDirectory, file);
       }),
       outdir: _outputDirectory,
-      outExtension: { ".js": `.${outtypeFormat}` },
+      outExtension: { ".js": `.${_outtypeFormat}` },
       bundle: false,
       sourcemap: false,
       minify: _minifying,
@@ -364,7 +365,7 @@ export async function build({
       let hasUpdateImport = false;
       let correctedLine = "";
       const unformatRawFile = path.parse(join(_outputDirectory, fileName));
-      const formattedRawFilePath = `${unformatRawFile.dir}/${unformatRawFile.name}.${outtypeFormat}`;
+      const formattedRawFilePath = `${unformatRawFile.dir}/${unformatRawFile.name}.${_outtypeFormat}`;
       if (verbose) {
         console.log(
           `[build-esbuild] [Start] Fix local import on file : ${formattedRawFilePath}`
@@ -394,12 +395,12 @@ export async function build({
               // Convert to path
               const importFilePath = join(
                 unformatRawFile.dir,
-                `${pathCandidate}.${outtypeFormat}`
+                `${pathCandidate}.${_outtypeFormat}`
               );
               const importDefaultFilePath = join(
                 unformatRawFile.dir,
                 pathCandidate,
-                `index.${outtypeFormat}`
+                `index.${_outtypeFormat}`
               );
               const importDefaultFileJSPath = join(
                 unformatRawFile.dir,
@@ -412,14 +413,14 @@ export async function build({
                 correctedLine += `\n${codes.substring(
                   codeLine.start,
                   codeLine.source.end - 1
-                )}.${outtypeFormat}${codes.substring(
+                )}.${_outtypeFormat}${codes.substring(
                   codeLine.source.end - 1,
                   codeLine.end
                 )}`;
                 hasUpdateImport = true;
                 if (verbose) {
                   console.log(
-                    `Import fixed: ${pathCandidate}.${outtypeFormat}`
+                    `Import fixed: ${pathCandidate}.${_outtypeFormat}`
                   );
                 }
               } else if (existsSync(importDefaultFilePath)) {
@@ -432,7 +433,7 @@ export async function build({
                 if (front[front.length - 1] === "/") {
                   front = front.slice(0, -1);
                 }
-                correctedLine += `\n${front}/index.${outtypeFormat}${codes.substring(
+                correctedLine += `\n${front}/index.${_outtypeFormat}${codes.substring(
                   codeLine.source.end - 1,
                   codeLine.end
                 )}`;
@@ -443,7 +444,7 @@ export async function build({
                       pathCandidate[pathCandidate.length - 1] === "/"
                         ? pathCandidate.slice(0, -1)
                         : pathCandidate
-                    }/index.${outtypeFormat}`
+                    }/index.${_outtypeFormat}`
                   );
                 }
               } else if (existsSync(importDefaultFileJSPath)) {

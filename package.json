@@ -1,6 +1,6 @@
 {
   "name": "build-esbuild",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Build typescript files from source folder to build folder",
   "main": "./build/bin/index.js",
   "types": "./build/bin/index.d.ts",
@@ -17,7 +17,10 @@
     "esm:cli": "esbuild src/bin/index.ts --format=esm --platform=node --outfile=build/bin/index.mjs --target=ESNEXT --allow-overwrite",
     "cjs:esbuild": "esbuild src/esbuild.config.ts --format=cjs --platform=node --outfile=build/esbuild.config.js --target=ESNEXT --allow-overwrite",
     "cjs:cli": "esbuild src/bin/index.ts --format=cjs --platform=node --outfile=build/bin/index.js --target=ESNEXT --allow-overwrite",
-    "declaration": "npx tsc --project tsconfig.json"
+    "declaration": "npx tsc --project tsconfig.json",
+    "test": "npm run test:build && npm run test:declaration && jest",
+    "test:build": "node build/bin -s test/src -o test/build -m",
+    "test:declaration": "npx tsc --project tsconfig.test.json"
   },
   "repository": {
     "type": "git",
@@ -39,6 +42,7 @@
     "yargs": "^17.6.2"
   },
   "devDependencies": {
+    "@types/jest": "^29.4.0",
     "@types/node": "^18.11.19",
     "@types/yargs": "^17.0.22",
     "jest": "^29.4.1",

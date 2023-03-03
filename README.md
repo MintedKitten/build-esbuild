@@ -6,11 +6,13 @@ Transpiling typescript files and copy every other files in source folder to outp
 Either install this package as dev dependency, or use it as NPM Package Runner (npx)
 
 ## Example
+
 ```sh
-// Install as dev dependency
+# Install as dev dependency
 npm i -D build-esbuild
 build-esbuild -s src -o dist
-// Use NPM Package Runner (npx)
+
+# Use NPM Package Runner (npx)
 npx build-esbuild --help
 npx build-esbuild -s src -o dist
 npx build-esbuild -s src -o dist -m

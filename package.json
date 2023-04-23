@@ -9,7 +9,7 @@
     "build-esbuild": "./build/bin/index.js"
   },
   "scripts": {
-    "prepublish": "npm run build && npm run declaration",
+    "prepublishOnly": "npm run build && npm run declaration",
     "build": "npm run build:esm && npm run build:cjs",
     "build:esm": "npm run esm:esbuild && npm run esm:cli",
     "build:cjs": "npm run cjs:esbuild && npm run cjs:cli",

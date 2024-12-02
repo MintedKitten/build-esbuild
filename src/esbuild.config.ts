@@ -14,137 +14,41 @@ import { nodeExternalsPlugin } from "esbuild-node-externals";
 import { Parser } from "acorn";
 import acorn_jsx from "acorn-jsx";
 
-// Would love to do the whole thing, but don't have time.
-interface DefaultAcornNode {
-  type: string;
-  start: number;
-  end: number;
-  [x: string]: any;
-}
-
-interface ProgramAcornNode extends DefaultAcornNode {
-  type: "Program";
-  body: AcornNodes[];
-  sourceType: "module" | "script";
-}
-
-interface ImportDeclarationAcornNode extends DefaultAcornNode {
-  type: "ImportDeclaration";
-  specifiers: (ImportDefaultSpecifierAcornNode | ImportSpecifierAcornNode)[];
-  source: LiteralAcornNode;
-}
-
-interface ImportDefaultSpecifierAcornNode extends DefaultAcornNode {
-  type: "ImportDefaultSpecifier";
-  local: IdentifierAcornNode;
-}
-
-interface LiteralAcornNode extends DefaultAcornNode {
-  type: "Literal";
-  value: string;
-  raw: string;
-}
-
-interface IdentifierAcornNode extends DefaultAcornNode {
-  type: "Identifier";
-  name: string;
-}
-
-interface ImportSpecifierAcornNode extends DefaultAcornNode {
-  type: "ImportSpecifier";
-  imported: IdentifierAcornNode;
-  local: IdentifierAcornNode;
-}
-
-interface VariableDeclarationAcornNode extends DefaultAcornNode {
-  type: "VariableDeclaration";
-  declarations: VariableDeclaratorAcornNode[];
-  kind: "const" | "var" | "let";
-}
-
-interface VariableDeclaratorAcornNode extends DefaultAcornNode {
-  type: "VariableDeclarator";
-  id: IdentifierAcornNode;
-  init: CallExpressionAcornNode;
-}
-
-interface CallExpressionAcornNode extends DefaultAcornNode {
-  type: "CallExpression";
-  optional: boolean;
-  callee: IdentifierAcornNode;
-  argument: IdentifierAcornNode[];
-}
-
-interface FunctionDeclarationAcornNode extends DefaultAcornNode {
-  type: "FunctionDeclaration";
-  id: IdentifierAcornNode;
-  params: IdentifierAcornNode;
-  expression: boolean;
-  generator: boolean;
-  async: boolean;
-  body: BlockStatementAcornNode;
-}
-
-interface BlockStatementAcornNode extends DefaultAcornNode {
-  type: "BlockStatement";
-  body: BlockStatementsArrayNode[];
-}
-
-interface IfStatementAcornNode extends DefaultAcornNode {
-  type: "IfStatement";
-  alternate: any;
-  test: BinaryExpressionAcornNode;
-  consequence: any;
-}
-
-interface BinaryExpressionAcornNode extends DefaultAcornNode {
-  type: "BinaryExpression";
-  operator: string;
-}
-
-type BlockStatementsArrayNode =
-  | VariableDeclarationAcornNode
-  | IfStatementAcornNode;
-
-type AcornNodes =
-  | ImportDeclarationAcornNode
-  | ImportDefaultSpecifierAcornNode
-  | LiteralAcornNode
-  | IdentifierAcornNode
-  | ImportSpecifierAcornNode
-  | VariableDeclarationAcornNode;
-
 export type outputExtension = "js" | "mjs";
 
 export interface buildInterface {
   /**
-   * {string} The Source Directory of the original files - Default: src
+   * The Source Directory of the original files - Default: src
    */
   sourceDirectory: string;
   /**
-   * {string} The Output DIrectory of the transpiled files - Default: build
+   * The Output DIrectory of the transpiled files - Default: build
    */
   outputDirectory: string;
   /**
-   * {esbuild.Format} The Output Format of the transpiled files - Default: esm
+   * The Output Format of the transpiled files - Default: esm
    */
   outputFormat: esbuild.Format;
   /**
-   * {string} The Output File Extension of the transpiled files - Default: mjs
+   * The Output File Extension of the transpiled files - Default: mjs
    */
   outputExtension: outputExtension;
   /**
-   * {boolean} Option to minify the transpiled files - Default: false
+   * Option to minify the transpiled files - Default: false
    */
   minifying: boolean;
   /**
-   * {boolean} Option to delete the output folder before new build - Default: true
+   * Option to delete the output folder before new build - Default: true
    */
   clearPreviousBuild: boolean;
   /**
-   * {boolean} Option to print every steps of the program - Default: false
+   * Option to print every steps of the program - Default: false
    */
   verbose?: boolean;
+  /**
+   * Option to enable experimental / in progress features - Default: false
+   */
+  experiment?: boolean;
 }
 /**
  * Transpiled the files within the source firectory to the output directory.
@@ -163,6 +67,7 @@ export async function build({
   minifying = false,
   clearPreviousBuild = true,
   verbose = false,
+  experiment = false,
 }: buildInterface) {
   // Options
   const _sourceDirectory: string = sourceDirectory;
@@ -331,25 +236,27 @@ export async function build({
     if (verbose) {
       console.log("[build-esbuild] [Start] Fixing local import.");
     }
-    await esmUpdateLocalImport(entryPoints)
-      .then((r) => {
-        if (verbose) {
-          console.log(
-            "[build-esbuild] Fix local import finish with the result"
-          );
-          console.log(r);
-        }
-      })
-      .catch((er) => {
-        if (verbose) {
-          console.log("[build-esbuild] Fix local import error with the result");
-          console.error("ECMA Fix Error");
-          console.error(er);
-        }
-      });
+    try {
+      const res = esmUpdateLocalImport(entryPoints, _minifying);
+      if (verbose) {
+        console.log("[build-esbuild] Fix local import finish with the result");
+        console.log(res);
+      }
+    } catch (er) {
+      if (verbose) {
+        console.log("[build-esbuild] Fix local import error with the result");
+        console.error("ECMA Fix Error");
+        console.error(er);
+      }
+    }
     if (verbose) {
       console.log("[build-esbuild] [Finish] Fixing local import.");
     }
+  } else if (experiment && _outputFormat === "cjs") {
+    // If output is in CommonJS, async import must be fix
+    try {
+      const res = cjsUpdateAsyncImport(entryPoints, _minifying);
+    } catch (er) {}
   }
 
   console.log("[build-esbuild] Finish operation");
@@ -357,9 +264,14 @@ export async function build({
   /**
    * Fixing import if output format is in esm (ECMAScript)
    * @param entryPoints {string[]} The paths of files to fix import
-   * @returns {Promise<boolean>} Return true if success, otherwise throw an Error.
+   * @param minify {boolean} If the output should follow a minify style format, i.e. newline or no newline.
+   * @returns {boolean} Return true if success, otherwise throw an Error.
    */
-  async function esmUpdateLocalImport(entryPoints: string[]): Promise<boolean> {
+  function esmUpdateLocalImport(
+    entryPoints: string[],
+    minify: boolean
+  ): boolean {
+    const newline: string = minify ? "" : "\n";
     for (let index = 0; index < entryPoints.length; index++) {
       const fileName = entryPoints[index];
       let hasUpdateImport = false;
@@ -377,11 +289,14 @@ export async function build({
         const codeStructure = Parser.extend(acorn_jsx()).parse(codes, {
           ecmaVersion: "latest",
           sourceType: "module",
-        }) as unknown as ProgramAcornNode;
+        });
         // If parsed successfully, read the structure of the code
         const codeBody = codeStructure.body;
-        for (let index = 0; index < codeBody.length; index++) {
-          const codeLine = codeBody[index];
+        if (verbose) {
+          console.log(JSON.stringify(codeBody, null, 2));
+        }
+        for (let jndex = 0; jndex < codeBody.length; jndex++) {
+          const codeLine = codeBody[jndex];
           try {
             // If the current structure is an import line, scan if import is local then fix the import.
             if (codeLine.type === "ImportDeclaration") {
@@ -410,7 +325,7 @@ export async function build({
               // Check if import is local file
               if (existsSync(importFilePath)) {
                 // Import is local file. Fix the import path.
-                correctedLine += `\n${codes.substring(
+                correctedLine += `${newline}${codes.substring(
                   codeLine.start,
                   codeLine.source.end - 1
                 )}.${_outtypeFormat}${codes.substring(
@@ -433,7 +348,7 @@ export async function build({
                 if (front[front.length - 1] === "/") {
                   front = front.slice(0, -1);
                 }
-                correctedLine += `\n${front}/index.${_outtypeFormat}${codes.substring(
+                correctedLine += `${newline}${front}/index.${_outtypeFormat}${codes.substring(
                   codeLine.source.end - 1,
                   codeLine.end
                 )}`;
@@ -468,12 +383,7 @@ export async function build({
               const err = e as Error;
               console.log(err.message);
             }
-            correctedLine +=
-              "\n" + codes.substring(codeLine.start, codeLine.end);
-          } finally {
-            if (index === 0) {
-              correctedLine = correctedLine.trimStart();
-            }
+            correctedLine += `${newline}${codes.substring(codeLine.start, codeLine.end)}`;
           }
         }
       } catch (e) {
@@ -483,7 +393,100 @@ export async function build({
         if (verbose) {
           console.log("[build-esbuild] [Finish] Fix local import");
         }
-        writeFileSync(formattedRawFilePath, correctedLine, {
+        writeFileSync(formattedRawFilePath, correctedLine.trim(), {
+          flag: "w",
+        });
+      } else {
+        if (verbose) {
+          console.log("[build-esbuild] [Finish] No local import to fix");
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Experiment Status: In progress - Current not doing anything
+   *
+   * Fixing async import if the output format is in cjs (CommonJS)
+   * @param entryPoints {string[]} The paths of files to fix import
+   * @param minify {boolean} If the output should follow a minify style format, i.e. newline or no newline.
+   * @returns {boolean} Return true if success, otherwise throw an Error.
+   */
+  function cjsUpdateAsyncImport(
+    entryPoints: string[],
+    minify: boolean
+  ): boolean {
+    const newline: string = minify ? "" : "\n";
+    for (let index = 0; index < entryPoints.length; index++) {
+      const fileName = entryPoints[index];
+      let hasUpdateImport = false;
+      let correctedLine = "";
+      const unformatRawFile = path.parse(join(_outputDirectory, fileName));
+      const formattedRawFilePath = `${unformatRawFile.dir}/${unformatRawFile.name}.${_outtypeFormat}`;
+      if (verbose) {
+        console.log(
+          `[build-esbuild] [Start] Fix async import on file : ${formattedRawFilePath}`
+        );
+      }
+      const codes = readFileSync(formattedRawFilePath).toString();
+      try {
+        // Try parsing the codes
+        const codeStructure = Parser.extend(acorn_jsx()).parse(codes, {
+          ecmaVersion: "latest",
+          sourceType: "module",
+        });
+        // If parsed successfully, read the structure of the code
+        const codeBody = codeStructure.body;
+        if (verbose) {
+          console.log(JSON.stringify(codeBody, null, 2));
+        }
+        for (let jndex = 0; jndex < codeBody.length; jndex++) {
+          const codeLine = codeBody[jndex];
+          try {
+            // Debug: figuring what to call
+            // console.log(codeLine.type);
+            // console.log(codeLine);
+            if (codeLine.type === "FunctionDeclaration") {
+              const body = codeLine.body;
+              for (let index = 0; index < body.body.length; index++) {
+                const n = body.body[index];
+                if (n.type === "IfStatement") {
+                  console.log(n.consequent);
+                  // const cons = n.consequent;
+                  // for (let index = 0; index < cons.length; index++) {
+                  //   const binb = cons[index];
+                  //   if (binb.type === "VariableDeclaration") {
+                  //     const dlct = binb.declarations;
+                  //     for (let index = 0; index < dlct.length; index++) {
+                  //       const dlc = dlct[index];
+                  //       if (dlc.init.type === "AwaitExpression") {
+                  //         const dcinit = dlc.init;
+                  //         console.log(dcinit.argument);
+                  //       }
+                  //     }
+                  //   }
+                  // }
+                }
+              }
+            }
+          } catch (e) {
+            // Structure does not need to be fix. Copy to new file.
+            if (verbose) {
+              const err = e as Error;
+              console.log(err.message);
+            }
+            correctedLine += `${newline}${codes.substring(codeLine.start, codeLine.end)}`;
+          }
+        }
+      } catch (e) {
+        console.error(`Update error on file name: ${fileName}`);
+      }
+      if (hasUpdateImport) {
+        if (verbose) {
+          console.log("[build-esbuild] [Finish] Fix local import");
+        }
+        writeFileSync(formattedRawFilePath, correctedLine.trim(), {
           flag: "w",
         });
       } else {

@@ -1,2 +1,5 @@
 # Node Packages
 /node_modules
+
+test/build
+build

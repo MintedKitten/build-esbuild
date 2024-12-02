@@ -1,3 +1,2 @@
-import { getGoodbyeName } from "./goodbye";
-import { getHelloName } from "./hello";
-export { getHelloName, getGoodbyeName };
+export { getGoodbyeName } from "./goodbye";
+export { getHelloName } from "./hello";

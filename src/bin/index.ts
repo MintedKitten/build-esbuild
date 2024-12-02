@@ -56,7 +56,13 @@ const options = yargs
     describe: "Options to print steps verbosely",
     type: "boolean",
   })
+  .options("experiment", {
+    default: false,
+    describe: "Option to enable experimental / in progress features",
+    type: "boolean",
+  })
   .help(true)
+  .alias("help", "h")
   .strict()
   .parseSync();
 
@@ -70,6 +76,7 @@ async function run(options: buildInterface) {
       minifying: options.minifying,
       clearPreviousBuild: options.clearPreviousBuild,
       verbose: options.verbose,
+      experiment: options.experiment,
     })
       .then(() => {
         resolve(true);
@@ -87,6 +94,7 @@ run({
   minifying: options.m,
   clearPreviousBuild: options.d,
   verbose: options.v,
+  experiment: options.experiment,
 });
 
 export { run };

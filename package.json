@@ -6,7 +6,7 @@
   "types": "./build/bin/index.d.ts",
   "module": "./build/bin/index.mjs",
   "bin": {
-    "build-esbuild": "./build/bin/index.js"
+    "build-esbuild": "build/bin/index.js"
   },
   "scripts": {
     "prepublishOnly": "npm run build && npm run declaration",
@@ -28,7 +28,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/MintedKitten/build-esbuild.git"
+    "url": "git+https://github.com/MintedKitten/build-esbuild.git"
   },
   "keywords": [
     "typescript",
